@@ -62,3 +62,23 @@
     '(i do not know that command.)))
 
 (game-print '(THIS IS A SENTENCE. WHAT ABOUT THIS? PROBABLY.))
+
+(defun twek-text (lst caps lit)
+  (when lst
+    (let ((item (car lst))
+          (rest (cdr lst)))
+      (cond ((eql item #\space) (cons item (twek-text rest caps lit)))
+            ((member item '(#\! #\? #\.)) (cons item (twek-text rest t lit)))
+            ((eql item #\") (twek-text rest caps (not lit)))
+            (lit (cons item (twek-text rest nil lit)))
+            (caps (cons (char-upcase item) (twek-text rest nil lit)))
+            (t (cons (char-downcase item) (twek-text rest nil nil)))))))
+
+(defun game-print (lst)
+  (princ (coerce (twek-text (coerce (string-trim "()"
+                                                 (prin1-to-string lst))
+                                    'list)
+                            t
+                            nil)
+                 'string))
+  (fresh-line))
