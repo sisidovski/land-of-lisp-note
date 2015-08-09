@@ -118,9 +118,34 @@
 (defun draw-city ()
   (ugraph->png "city" *congestion-city-nodes* *congestion-city-edges*))
 
+(defun known-city-nodes ()
+  (mapcar (lambda (node)
+            (if (member node *visited-nodes*)
+              (let ((n (assoc node *congestion-city-nodes*)))
+                (if (eql node *player-pos*)
+                  (append n '(*))
+                  n))
+              (list node '?)))
+          (remove-duplicates
+            (append *visited-nodes*
+                    (mapcan (lambda (node)
+                              (mapcar #'car
+                                      (cdr (assoc node
+                                                  *congestion-city-edges*))))
+                            *visited-nodes*)))))
+
+(defun known-city-edges ()
+  (mapcar (lambda (node)
+            (cons node (mapcar (lambda (x)
+                                 (if (membar (car x) *visited-nodes*)
+                                   x
+                                   (list (car x))))
+                               (cdr (assoc node *congestion-city-edges*)))))
+          *visited-nodes*))
+
 (defun new-game ()
   (setf *congestion-city-edges* (make-city-edges))
-  (setf *congestion-city-nodes* (make-city-edges *congestion-city-edges*))
+  (setf *congestion-city-nodes* (make-city-nodes *congestion-city-edges*))
   (setf *player-pos* (find-empty-node))
   (setf *visited-nodes* (list *player-pos*))
   (draw-city))
@@ -141,6 +166,25 @@
                                                   *congestion-city-edges*))))
                             *visited-nodes*)))))
 
+(defun known-city-edges ()
+  (mapcar (lambda (node)
+            (cons node (lambda (x)
+                         (if (member (car x) *visited-nodes*)
+                           x
+                           (list (car x))))
+                  (cdr (assoc node *congestion-city-edges*)))))
+  *visited-nodes*)
+
+(defun draw-known-city ()
+  (ugraph->png "known-city" (known-city-nodes) (known-city-edges)))
+
+(defun new-game ()
+  (setf *congestion-city-edges* (make-city-edges))
+  (setf *congestion-city-nodes* (make-city-nodes *congestion-city-nodes*))
+  (setf *player-pos* (find-empty-node))
+  (setf *visited-nodes* (list *player-pos*))
+  (draw-city)
+  (draw-known-city))
 
 ; other
 (loop repeat 10
@@ -156,3 +200,11 @@
 (let* ((a 5) ; valid
        (b (+ a 2)))
   b)
+
+(defun ingredients (order)
+  (mapcan (lambda (burger)
+            (case burger
+              (single (list 'patty))
+              (double (list 'patty 'patty))
+              (double-chees (list 'patty 'patty 'cheese))))
+          order))
