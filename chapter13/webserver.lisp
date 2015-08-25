@@ -43,7 +43,37 @@
                     (subseq s (+ i 2)))))))
     (when h
       (cons h (get-header stream)))))
-  
+
+(defun get-content-params (stream header)
+  (let ((length (cdr (assoc 'content-length header))))
+    (when length 
+      (let ((content (make-string (parse-integer length))))
+        (read-sequence content stream)
+        (parse-params content)))))
+
+(defun serve (request-handler)
+  (let ((socket (socket-server 8080)))
+    (unwind-protect
+      (loop (with-open-stream (stream (socket-accept socket))
+              (let* ((url    (parse-url (read-line stream)))
+                     (path   (car url))
+                     (header (get-header stream))
+                     (params (append (cdr url)
+                                     (get-content-params stream header)))
+                     (*standard-output* stream))
+                (funcall request-handler path header params))))
+      (socket-server-close socket))))
+
+(defun hello-request-handler (path header params)
+  (if (equal path "greeting")
+    (let ((name (assoc 'name params)))
+      (if (not name)
+        (princ "<html><form>What is your name?<input name='name' /></form></html>")
+        (format t "<html>Nice to meet you, ~a!</html>" (cdr name))))
+    (princ "Sorry... I don't know that page.")))
+
+; (serve #'hello-request-handler)
+
 
 ; test
 (decode-param "foo")
@@ -54,4 +84,14 @@
 
 (parse-url "GET /lolcats.html HTTP/1.1")
 (parse-url "GET /lolcats.html?extra-funny=yes HTTP/1.1")
+
+(get-header (make-string-input-stream "foo: 1
+bar: abc, 123
+
+"))
+
+(hello-request-handler "lolcats" '() '())
+(hello-request-handler "greeting" '() '())
+(hello-request-handler "greeting" '() '((name . "Bob")))
+
 
