@@ -14,6 +14,20 @@
 (defun player-letter (n)
   (code-char (+ 97 n)))
 
+(defun draw-board (board)
+  (loop for y below *board-size*
+        do (progn (fresh-line)
+                  (loop repeat (- *board-size* y)
+                        do (princ " "))
+                  (loop for x below *board-size*
+                        for hex = (aref board (+ x (* *board-size* y)))
+                        do (format t "~a-~a " (player-letter (first hex))
+                                   (second hex))))))
+
 ; test
 (gen-board)
+
+(player-letter 1)
+
+(draw-board #((0 3) (0 3) (1 3) (1 1)))
 
