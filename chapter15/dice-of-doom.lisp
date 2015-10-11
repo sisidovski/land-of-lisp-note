@@ -166,6 +166,66 @@
         ((zerop (car tree)) (play-vs-computer (handle-human tree)))
         (t (play-vs-computer (handle-computer tree)))))
 
+
+; performance
+
+(defparameter *board-size* 3)
+(defparameter *board-hexnum* (* *board-size* *board-size*))
+
+(neighbors 0)
+(let ((old-neighbors (symbol-function 'neighbors))
+      (previous (make-hash-table)))
+  (defun neighbors (pos)
+    (or (gethash pos previous)
+        (setf (gethash pos previous) (funcall old-neighbors pos)))))
+
+(let ((old-game-tree (symbol-function 'game-tree))
+      (previous (make-hash-table :test #'equalp)))
+  (defun game-tree (&rest rest)
+    (or (gethash rest previous)
+        (setf (gethash rest previous) (apply old-game-tree rest)))))
+
+(let ((old-rate-position (symbol-function 'rate-position))
+      (previous (make-hash-table)))
+  (defun rate-position (tree player)
+    (let ((tab (gethash player previous)))
+      (unless tab
+        (setf tab (setf (gethash player previous) (make-hash-table))))
+      (or (gethash tree tab)
+          (funcall old-rate-position tree player)))))
+
+(defun my-length (lst)
+  (if lst 
+    (1+ (my-length (cdr lst)))
+    0))
+
+(my-length '(file foh fum))
+(defparameter *biglist* (loop for i below 100000 collect 'x))
+(my-length *biglist*)
+
+(defun my-length (lst)
+  (labels ((f (lst acc)
+             (if lst 
+               (f (cdr lst) (1+ asc))
+               acc)))
+    (f lst 0)))
+(compile 'my-length)
+
+(defun add-new-dice (board player spare-dice)
+  (labels ((f (lst n acc)
+             (cond ((zerop n) (append (reverse acc) lst))
+                   ((null lst) (reverse acc))
+                   (t (let ((cur-player (caar lst))
+                            (cur-dice (cadar lst)))
+                        (if (and (eq cur-player player)
+                                 (< cur-dice *max-dice*))
+                          (f (cdr lst)
+                             (1- n)
+                             (cons (list cur-player (1+ cur-dice)) acc))
+                          (f (cdr lst) n (cons (car lst) acc))))))))
+    (board-array (f (coerce board 'list) spare-dice ()))))
+
+
 ; test
 (gen-board)
 
